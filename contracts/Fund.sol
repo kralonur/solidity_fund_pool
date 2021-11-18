@@ -66,6 +66,29 @@ contract Fund is Ownable {
         _;
     }
 
+    /// An event that is emitted after creating a pool
+    event CreateFundPoolEvent(uint256 poolId, address indexed _fundOwner);
+
+    /// An event that is emitted after launching a pool
+    event LaunchFundPoolEvent(uint256 poolId);
+
+    /// An event that is emitted after finishing a pool
+    event FinishFundPoolEvent(
+        uint256 poolId,
+        address indexed _to,
+        uint256 _value
+    );
+
+    /// An event that is emitted after chaging owner of a pool
+    event FundOwnerChangeEvent(
+        uint256 poolId,
+        address indexed _from,
+        address indexed _to
+    );
+
+    /// An event that is emitted after funding a pool
+    event FundEvent(uint256 poolId, address indexed _from, uint256 _value);
+
     /**
         Deploys to network.
         @param _owner contract owner.
@@ -82,6 +105,7 @@ contract Fund is Ownable {
     function createFundPool(address _fundOwner) external onlyOwner {
         require(_fundOwner != address(0), "Fund owner adress cannot be zero!");
         fundRaises[fundIndex++].fundOwner = _fundOwner;
+        emit CreateFundPoolEvent(fundIndex - 1, _fundOwner);
     }
 
     /**
@@ -98,6 +122,7 @@ contract Fund is Ownable {
             "Fund state has to be inactive to launch!"
         );
         fundRaises[_poolId].state = FundState.ACTIVE;
+        emit LaunchFundPoolEvent(_poolId);
     }
 
     /**
@@ -119,6 +144,11 @@ contract Fund is Ownable {
         fundRaise.state = FundState.COMPLETED;
         totalActiveFunds -= totalFundedAmount;
         payable(fundRaise.fundOwner).transfer(totalFundedAmount);
+        emit FinishFundPoolEvent(
+            _poolId,
+            fundRaise.fundOwner,
+            totalFundedAmount
+        );
     }
 
     /**
@@ -136,7 +166,9 @@ contract Fund is Ownable {
             "Fund owner adress cannot be zero!"
         );
         FundRaise storage fundRaise = fundRaises[_poolId];
+        address oldFundOwner = fundRaise.fundOwner;
         fundRaise.fundOwner = _newFundOwner;
+        emit FundOwnerChangeEvent(_poolId, oldFundOwner, _newFundOwner);
     }
 
     /**
@@ -156,6 +188,7 @@ contract Fund is Ownable {
         fundRaise.totalFundedAmount += msg.value;
         totalActiveFunds += msg.value;
         totalFundsCollected += msg.value;
+        emit FundEvent(_poolId, msg.sender, msg.value);
     }
 
     /**
